@@ -11,7 +11,7 @@ import (
 
 type node struct {
 			name string
-			children []node
+			children []*node
 			visited bool
 }
 type pair struct {
@@ -40,29 +40,49 @@ func checkWords(word1 string, word2 string) bool{
 		return false
 	}
 }
-
+func mutateChildren(a *[]node, n node) {
+		
+}
 //func BFS_helper(nodes []nodes, layer int)
 //{
 //}
-func get(a []node, toFind string) *node {
-				for _, element := range a {
+func get(a *[]*node, toFind string, change bool) *node {
+				for _, element := range *a {
 								//fmt.Println("Comparing: ", element.name, " and ", toFind)
 								if strings.EqualFold(element.name, toFind) {
 												//fmt.Println("Match Found")
-												return &element
+												element.visited = change
+												return element
 								}
 				}
 				return nil
 }
-
-func BFS(nodes []node, root string, toFind string) int {
+func printPred(pred map[string]node, node node, count int) int {
+		if _, ok := pred[node.name]; !ok {
+				fmt.Println(node.name)
+				return count
+		}
+		fmt.Print(node.name, "<-")
+		count++
+		return printPred(pred, pred[node.name], count)
+}
+func BFS(nodes []*node, root string, toFind string) int {
 	//node[0].visited = true
-	rootNode := get(nodes, root)
+	//fmt.Println(nodes)
+	if strings.EqualFold(root, toFind) {
+		return 0
+	}
+	for _, n := range nodes {
+			n.visited = false;
+	}
+	//fmt.Println(nodes)
+	rootNode := get(&nodes, root, true)
 
 	//fmt.Println("root: ", rootNode.name, "rootString: ", root)
-	rootNode.visited = true
+	//rootNode.visited = true
 	layer := 1
 	queue := make([]node, 0)
+	pred := make(map[string]node,0)
 	queue = append(queue, *rootNode)
 	for {
 		v := queue[0]
@@ -72,18 +92,26 @@ func BFS(nodes []node, root string, toFind string) int {
 
 		for _,element := range v.children {
 				if element.visited == false {
-						fmt.Println("Layer:", layer, "ELEMENT:", element.name)
 						element.visited = true
-						elementTree := get(nodes, element.name)
-						elementTree.visited = true
-						fmt.Println("Local copyi: ", elementTree)
-						fmt.Println("Tree version: ",get(nodes, element.name))
-						queue = append(queue, *elementTree)
-						//maybe pred
-						////fmt.Println("ToFind: ", toFind, "ele:", element.name)
+						elementTree := get(&nodes, element.name, true)
+						//queue = append(queue, *elementTree)
+						//fmt.Println("Visiting Node:", *element)
+						for _ , child := range elementTree.children {
+							queue = append(queue, *child)
+						}
+						pred[element.name] = v
+						//pred = append(pred, *element)
 						if strings.EqualFold(toFind, element.name) {
 								//fmt.Println("return layer", layer)
-								return layer
+								//for _, p := range pred {
+								//		fmt.Print(p.name, " -> ")
+								//}
+								fmt.Println(pred)
+								return printPred(pred, *element, 0)
+
+								//fmt.Println(pred)
+								//return len(pred)
+								//return layer
 						}
 				}
 		}
@@ -91,6 +119,7 @@ func BFS(nodes []node, root string, toFind string) int {
 		if len(queue) < 1 {
 						break
 		}
+		//fmt.Println("UPDATING LAYER WITH CURRNODE: ", v)
 		layer++
 	}
 	return -1
@@ -100,7 +129,7 @@ func main() {
 		reader := bufio.NewReader(os.Stdin)
 		//fmt.Print("Enter text; ")
 		words := make([]string, 0)
-		children := make(map[string]string, 0)
+		//children := make(map[string]string, 0)
 		pairs := make([]pair, 0)
 		for {
 				text, err  := reader.ReadString('\n')
@@ -121,22 +150,32 @@ func main() {
 		fmt.Println(words)
 		fmt.Println("*-*-*-*-*-* PAIRS *-*-*-*-*-*")
 		fmt.Println(pairs)
-		nodes := make([]node, 0)
+		nodes := make([]*node, 0)
+		for _, w := range words {
+			nodes = append(nodes, &node{w, nil, false})
+		}
+		var currNode *node
 		for i := 0; i < len(words); i++ {
-				currNode := node{words[i], make([]node, 0), false}
+				currNode = get(&nodes, words[i], false)
 				for j:=0; j < len(words); j++ {
 					if j == i {
 									continue
 					} else {
 							isMatching := checkWords(words[i], words[j])
 							if isMatching {
-									newNode := node{words[j], make([]node, 0), false}
-									currNode.children = append(currNode.children, newNode)
-									children[currNode.name] += newNode.name
+									//newNode := node{words[j], make([]node, 0), false}
+									//fmt.Println(currNode.children)
+									//fmt.Println("local Reference: ", &currNode)
+									//fmt.Println("nodes reference: ", get(&nodes, words[j], false))
+									currNode.children = append(currNode.children, get(&nodes, words[j], false))
+									//fmt.Println(currNode.children)
+									//fmt.Println(get(&nodes, words[i], false))
+									//children[currNode.name] += newNode.name
 							}
 					}
 				}
-				nodes = append(nodes, currNode)
+				//mutateChildren(nodes, currNode)
+				//nodes = append(nodes, currNode)
 		}
 		//for _, element := range nodes {
 		//	fmt.Println(element.name, ": ")
